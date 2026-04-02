@@ -10,7 +10,7 @@ from app.core.security import (
     decode_token,
     get_current_user,
 )
-from app.models.user import User
+from app.models.models import User
 from app.schemas.schemas import (
     UserCreate,
     UserLogin,

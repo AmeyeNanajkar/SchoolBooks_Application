@@ -41,6 +41,7 @@ class User(Base):
     cart = relationship("Cart", back_populates="user")
     wishlist = relationship("Wishlist", back_populates="user")
     orders = relationship("Order", back_populates="user")
+    vendor = relationship("Vendor", back_populates="user", uselist=False)
 
 
 class Address(Base):

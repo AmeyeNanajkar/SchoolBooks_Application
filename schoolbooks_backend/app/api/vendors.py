@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.core.security import get_current_user, require_role
-from app.models.user import User
+from app.models.models import User
 from typing import List
 import uuid
 

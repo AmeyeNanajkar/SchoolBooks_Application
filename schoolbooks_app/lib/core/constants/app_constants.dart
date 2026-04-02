@@ -1,5 +1,5 @@
 class ApiConstants {
-  static const String baseUrl = 'https://api.schoolbooks.in/v1';
+  static const String baseUrl = 'http://localhost:8000/api/v1';
   static const String apiVersion = 'v1';
   
   static const Duration connectionTimeout = Duration(seconds: 30);
