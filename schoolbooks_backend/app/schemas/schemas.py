@@ -50,6 +50,16 @@ class OTPVerify(BaseModel):
     otp: str
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    email: EmailStr
+    otp: str
+    new_password: str
+
+
 class AddressBase(BaseModel):
     name: str
     phone: str
