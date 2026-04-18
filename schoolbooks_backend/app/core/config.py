@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
 
     DATABASE_URL: str = os.getenv(
-        "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/schoolbooks"
+        "DATABASE_URL", "sqlite:///./schoolbooks.db"
     )
 
     SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")

@@ -50,7 +50,9 @@ class BookModel extends Book {
       isAvailable: json['is_available'] as bool? ?? true,
       vendorId: json['vendor_id'] as String?,
       vendorName: json['vendor_name'] as String?,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : DateTime.now(),
       updatedAt: json['updated_at'] != null
           ? DateTime.parse(json['updated_at'] as String)
           : null,

@@ -13,7 +13,7 @@ from app.core.security import (
 )
 from app.core.config import settings
 from app.core.email import send_otp_email
-from app.models import User
+from app.models.models import User
 from app.schemas.schemas import (
     UserCreate,
     UserLogin,
