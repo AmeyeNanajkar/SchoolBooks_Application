@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
+from datetime import datetime, timedelta
 from app.core.database import get_db
 from app.core.security import (
     verify_password,
@@ -10,6 +11,8 @@ from app.core.security import (
     decode_token,
     get_current_user,
 )
+from app.core.config import settings
+from app.core.email import send_otp_email
 from app.models.models import User
 from app.schemas.schemas import (
     UserCreate,
@@ -19,6 +22,8 @@ from app.schemas.schemas import (
     RefreshTokenRequest,
     OTPRequest,
     OTPVerify,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
 )
 import uuid
 import random
@@ -107,12 +112,106 @@ async def send_otp(request: OTPRequest, db: Session = Depends(get_db)):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
         )
+
+    otp_code = str(random.randint(100000, 999999))
+    otp_expires_at = datetime.utcnow() + timedelta(minutes=settings.OTP_EXPIRE_MINUTES)
+
+    user.otp_code = otp_code
+    user.otp_expires_at = otp_expires_at
+    db.commit()
+
+    send_otp_email(request.email, user.name, otp_code)
+
     return {
-        "message": "OTP sent successfully",
-        "otp": str(random.randint(100000, 999999)),
+        "message": "OTP sent successfully to your email",
     }
 
 
 @router.post("/otp/verify")
 async def verify_otp(request: OTPVerify, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == request.email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    if not user.otp_code or not user.otp_expires_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No OTP requested. Please request OTP first."
+        )
+
+    if user.otp_expires_at < datetime.utcnow():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OTP expired. Please request a new OTP."
+        )
+
+    if user.otp_code != request.otp:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid OTP. Please try again."
+        )
+
+    user.otp_code = None
+    user.otp_expires_at = None
+    user.is_verified = True
+    db.commit()
+
     return {"message": "OTP verified successfully"}
+
+
+@router.post("/forgot-password")
+async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == request.email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    otp_code = str(random.randint(100000, 999999))
+    otp_expires_at = datetime.utcnow() + timedelta(minutes=settings.OTP_EXPIRE_MINUTES)
+
+    user.otp_code = otp_code
+    user.otp_expires_at = otp_expires_at
+    db.commit()
+
+    send_otp_email(request.email, user.name, otp_code)
+
+    return {
+        "message": "Password reset OTP sent to your email",
+    }
+
+
+@router.post("/reset-password")
+async def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == request.email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    if not user.otp_code or not user.otp_expires_at:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No OTP requested. Please request password reset first."
+        )
+
+    if user.otp_expires_at < datetime.utcnow():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="OTP expired. Please request a new OTP."
+        )
+
+    if user.otp_code != request.otp:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid OTP. Please try again."
+        )
+
+    user.password_hash = get_password_hash(request.new_password)
+    user.otp_code = None
+    user.otp_expires_at = None
+    db.commit()
+
+    return {"message": "Password reset successful"}
